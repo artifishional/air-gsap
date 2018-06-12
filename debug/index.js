@@ -10,6 +10,6 @@ window.addEventListener("load", ()=> {
     ] );
 
     const bob = ext.on( (data) => console.log(data) );
-    bob( { actions: [ "fade-in" ] } );
+    bob( { action: [ "fade-in" ] } );
 
 });

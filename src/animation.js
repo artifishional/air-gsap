@@ -7,7 +7,7 @@ export default class Animation extends Observable {
 
     /**
      * @param {Object} gr
-     * @param {Schema} frames
+     * @param {Object} frames
      * [ "frames", [ "frame-name", { duration: (ms) }
      *      [ 0 (%), { x: 100 (px), y: 100 (px) } ], (optional)
      *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
@@ -24,7 +24,7 @@ export default class Animation extends Observable {
 
             return ( {
                  dissolve,
-                 actions: schema,
+                 action: schema,
                  env: { time = performance.now(), ttmp = time, state = "play" } = {} }
              ) => {
                 if(dissolve) {
@@ -46,7 +46,7 @@ export default class Animation extends Observable {
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
                                 .map(([range, props]) => new TweenMax(gr, duration / range, {startAt, ...props})),
                             align: "sequence",
-                            onComplete: () => emt("complete")
+                            onComplete: () => emt({action: `${name}-complete`})
                         });
                         from < 0 ? tl.restart(true) : tl.seek(from, false);
                         _cache.push( [ name, tl ] );
