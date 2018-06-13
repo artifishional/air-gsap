@@ -3,7 +3,7 @@ import {TimelineMax, TweenMax} from "gsap/all"
 import { Observable } from "air-stream"
 const {performance} = window;
 
-export class Animate extends Observable {
+export default class Animate extends Observable {
 
     /**
      * @param {Object} gr
