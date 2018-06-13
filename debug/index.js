@@ -1,4 +1,4 @@
-import { Animate } from "../src/animation"
+import Animate from "../src/animation"
 
 window.addEventListener("load", ()=> {
 
