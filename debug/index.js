@@ -1,11 +1,11 @@
-import Animate from "../src/animation"
+import Animate from "../src/animate"
 
 window.addEventListener("load", ()=> {
 
     const ext = new Animate( document.querySelector("div"), [
         "frames", [ "fade-in", { duration: 3 },
-            [ 0, { opacity: 0 } ],
-            [ 1, { opacity: 1 } ],
+            [ 0, { opacity: 1 } ],
+            [ 100, { opacity: 0 } ],
         ]
     ] );
 
