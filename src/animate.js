@@ -36,9 +36,9 @@ export default class Animate extends Observable {
                         const from = (time - ttmp) / 1000;
                         const [name, {duration, delay = 0}, ...keys] = inSchema.merge(schema).toJSON();
                         const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
-                        const existIndex = _cache.findIndex((_, _name) => name === _name);
+                        const existIndex = _cache.findIndex(([x]) => name === x);
                         if (existIndex > -1) {
-                            _cache[existIndex].kill();
+                            _cache[existIndex][1].kill();
                             _cache.splice(existIndex, 1);
                         }
                         if (state === "play") {
@@ -57,7 +57,7 @@ export default class Animate extends Observable {
                     }
                     else {
                         //todo need timer
-                        emt({action: `${name}-complete`});
+                        emt({action: `${schema[0]}-complete`});
                     }
                 }
             }
