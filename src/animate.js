@@ -23,7 +23,7 @@ export default class Animate extends Observable {
             const _schema = new Schema(frames);
 
             return ({
-                dissolve,
+                dissolve = false,
                 action: schema,
                 env: {time = performance.now(), ttmp = time, state = "play"} = {}
             }) => {
