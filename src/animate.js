@@ -26,7 +26,7 @@ export default class Animate extends Observable {
                 dissolve = false,
                 action: schema,
                 env: {time = performance.now(), ttmp = time, state = "play"} = {}
-            }) => {
+            } = { dissolve: true }) => {
                 if (dissolve) {
                     _cache.map(([_, tl]) => tl.kill());
                 }
