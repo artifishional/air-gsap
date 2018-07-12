@@ -12,9 +12,10 @@ const {performance} = window;
  *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
  *      [ 100 (%), { x: 200 (px), y: 100 (px) } ],
  * ]]
+ * @param {String} key
  */
 
-export default (gr, frames) =>
+export default ({target: gr}, frames/*, key*/) =>
     stream((emt, {sweep, hook}) => {
 
         emt.kf();
@@ -24,8 +25,8 @@ export default (gr, frames) =>
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({
-          action: schema,
-          env: {time = performance.now(), ttmp = time, state = "play"} = {}
+            action: schema,
+            env: {time = performance.now(), ttmp = time, state = "play"} = {}
         }) => {
             const inSchema = _schema.find(schema[0]);
             if (inSchema) {
