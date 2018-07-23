@@ -4,6 +4,17 @@ import {stream} from "air-stream"
 
 const {performance} = window;
 
+function setprops(node, props) {
+    if(props.hasOwnProperty("class")) {
+        if(props.class[0] === "!") {
+            node.classList.remove(props.class.substr(1));
+        }
+        else {
+            node.classList.add(props.class);
+        }
+    }
+}
+
 /**
  * @param {Object} gr
  * @param {Object} frames
@@ -28,27 +39,46 @@ export default ({target: gr}, frames/*, key*/) =>
             action: schema,
             env: {time = performance.now(), ttmp = time, state = "play"} = {}
         }) => {
+
             const inSchema = _schema.find(schema[0]);
             if (inSchema) {
                 const from = (time - ttmp) / 1000;
-                const [name, {duration, delay = 0}, ...keys] = inSchema.merge(schema).toJSON();
-                const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
+                const [name, {duration = -1, delay = 0, ...props}, ...keys] = inSchema.merge(schema).toJSON();
                 const existIndex = _cache.findIndex(([x]) => name === x);
                 if (existIndex > -1) {
                     _cache[existIndex][1].kill();
                     _cache.splice(existIndex, 1);
                 }
-                if (state === "play") {
-                    const tl = new TimelineMax({
-                        delay: delay + (from < 0 ? -from : 0),
-                        tweens: keys
-                            .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
-                            .map(([range, props]) => new TweenMax(gr, duration / range * 100, {startAt, ...props})),
-                        align: "sequence",
-                        onComplete: () => emt({action: `${name}-complete`})
-                    });
-                    from < 0 ? tl.restart(true) : tl.seek(from, false);
-                    _cache.push([name, tl]);
+                if(duration === -1) {
+                    if (state === "play") {
+                        if(from < 0) {
+                            const tl = new TweenMax({v: 100}, 1e-10, {
+                                delay: delay + (from < 0 ? -from : 0),
+                                onComplete: () => setprops( gr, props )
+                            } );
+                            tl.restart(true);
+                            _cache.push([name, tl]);
+                        }
+                        else {
+                            setprops( gr, props );
+                        }
+                    }
+                }
+                else {
+                    const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
+                    if (state === "play") {
+                        const tl = new TimelineMax({
+                            paused: true,
+                            delay: delay + (from < 0 ? -from : 0),
+                            tweens: keys
+                                .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
+                                .map(([range, props]) => new TweenMax(gr, duration / range * 100, {startAt, ...props})),
+                            align: "sequence",
+                            onComplete: () => emt({action: `${name}-complete`})
+                        });
+                        from < 0 ? tl.restart(true) : tl.play(from, false);
+                        _cache.push([name, tl]);
+                    }
                 }
             }
             else {
