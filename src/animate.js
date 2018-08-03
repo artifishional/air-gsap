@@ -18,7 +18,7 @@ function setprops(node, props) {
 /**
  * @param {Object} gr
  * @param {Object} frames
- * [ "frames", [ "frame-name", { duration: (ms) }
+ * [ "frames", [ "frame-name", { query: "", duration: (ms) }
  *      [ 0 (%), { x: 100 (px), y: 100 (px) } ], (optional)
  *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
  *      [ 100 (%), { x: 200 (px), y: 100 (px) } ],
@@ -26,7 +26,7 @@ function setprops(node, props) {
  * @param {String} key
  */
 
-export default ({target: gr}, frames/*, key*/) =>
+export default (view, frames/*, key*/) =>
     stream((emt, {sweep, hook}) => {
 
         emt.kf();
@@ -40,10 +40,16 @@ export default ({target: gr}, frames/*, key*/) =>
             env: {time = performance.now(), ttmp = time, state = "play"} = {}
         }) => {
 
+            if(!schema) return;
+
             const inSchema = _schema.find(schema[0]);
             if (inSchema) {
                 const from = (time - ttmp) / 1000;
-                const [name, {duration = -1, delay = 0, ...props}, ...keys] = inSchema.merge(schema).toJSON();
+                const [name, {duration = -1, delay = 0, query, ...props }, ...keys] = inSchema.merge(schema).toJSON();
+
+                const gr = view.query(query);
+                if(!gr) return emt({action: `${schema[0]}-complete`});
+
                 const existIndex = _cache.findIndex(([x]) => name === x);
                 if (existIndex > -1) {
                     _cache[existIndex][1].kill();
@@ -83,7 +89,7 @@ export default ({target: gr}, frames/*, key*/) =>
             }
             else {
                 //todo need timer
-                emt({action: `${schema[0]}-complete`});
+                return emt({action: `${schema[0]}-complete`});
             }
 
         });
