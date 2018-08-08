@@ -13,6 +13,11 @@ function setprops(node, props) {
             node.classList.add(props.class);
         }
     }
+    if(props.hasOwnProperty("attribute")) {
+        for(let key in props.attribute) {
+            node.setAttribute(key, props.attribute[key]);
+        }
+    }
 }
 
 /**
