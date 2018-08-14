@@ -4,20 +4,26 @@ import {stream} from "air-stream"
 
 const {performance} = window;
 
-function setprops(node, props) {
-    if(props.hasOwnProperty("class")) {
-        if(props.class[0] === "!") {
-            node.classList.remove(props.class.substr(1));
+function setprops(node, { class: _class, attribute, style, ...props } = {}) {
+    if(_class) {
+        if(_class[0] === "!") {
+            node.classList.remove(_class.substr(1));
         }
         else {
-            node.classList.add(props.class);
+            node.classList.add(_class);
         }
     }
-    if(props.hasOwnProperty("attribute")) {
-        for(let key in props.attribute) {
-            node.setAttribute(key, props.attribute[key]);
+    if(attribute) {
+        for(let key in attribute) {
+            node.setAttribute(key, attribute[key]);
         }
     }
+    if(style) {
+        for(let key in style) {
+            node.style[key] = style[key];
+        }
+    }
+    return props;
 }
 
 /**
@@ -75,7 +81,7 @@ export default (view, frames/*, key*/) =>
                     }
                 }
                 else {
-                    const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
+                    //const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
                     if (state === "play") {
                         const tl = new TimelineMax({
                             paused: true,
@@ -83,7 +89,11 @@ export default (view, frames/*, key*/) =>
                             tweens: keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
                                 .map(([range, props]) => {
-                                    return new TweenMax(gr, duration / range * 100, {startAt, ...gprops, ...props})
+                                    const dur = range ? duration / range * 100 : 1e-10;
+                                    const cutprops = setprops( document.createElement("div"), { ...gprops, ...props } );
+                                    return new TweenMax(gr, dur, {
+                                        ...cutprops, onComplete: () => setprops( gr, gprops )
+                                    })
                                 }),
                             align: "sequence",
                             onComplete: () => emt({action: `${name}-complete`})
