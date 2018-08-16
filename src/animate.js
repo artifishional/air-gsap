@@ -4,7 +4,9 @@ import {stream} from "air-stream"
 
 const {performance} = window;
 
-function setprops(node, { class: _class, attribute, style, ...props } = {}) {
+function setprops(node, { argv, class: _class, attribute, style, ...props } = {}) {
+
+    let format;
     if(_class) {
         if(_class[0] === "!") {
             node.classList.remove(_class.substr(1));
@@ -13,6 +15,22 @@ function setprops(node, { class: _class, attribute, style, ...props } = {}) {
             node.classList.add(_class);
         }
     }
+
+    if(format = node.getAttribute( "data-m2-format" )) { }
+    else if(node.textContent.search(/\$\{.*\}/)) {
+        format = node.textContent;
+        node.setAttribute( "data-m2-format", format )
+    }
+
+    if(format && argv) {
+        if(typeof argv === "object") {
+            node.textContent = format.replace(/\$\{(.*?)\}/g, (_, name) => argv[name.trim()]);
+        }
+        else {
+            node.textContent = format.replace(/\$\{(.*?)\}/g, () => argv);
+        }
+    }
+
     if(attribute) {
         for(let key in attribute) {
             node.setAttribute(key, attribute[key]);
