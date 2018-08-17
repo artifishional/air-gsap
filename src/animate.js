@@ -22,7 +22,7 @@ function setprops(node, { argv, class: _class, attribute, style, ...props } = {}
         node.setAttribute( "data-m2-format", format )
     }
 
-    if(format && argv) {
+    if(format && argv !== undefined) {
         if(typeof argv === "object") {
             node.textContent = format.replace(/\$\{(.*?)\}/g, (_, name) => argv[name.trim()]);
         }
