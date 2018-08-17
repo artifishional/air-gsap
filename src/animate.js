@@ -17,7 +17,7 @@ function setprops(node, { argv, class: _class, attribute, style, ...props } = {}
     }
 
     if(format = node.getAttribute( "data-m2-format" )) { }
-    else if(node.textContent.search(/\$\{.*\}/)) {
+    else if(node.textContent.search(/\$\{.*\}/) > -1) {
         format = node.textContent;
         node.setAttribute( "data-m2-format", format )
     }
@@ -72,6 +72,7 @@ export default (view, frames/*, key*/) =>
             if(!schema) return;
 
             const inSchema = _schema.find(schema[0]);
+
             if (inSchema) {
                 const from = (time - ttmp) / 1000;
                 const [name, {duration = -1, delay = 0, query, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
@@ -110,7 +111,7 @@ export default (view, frames/*, key*/) =>
                                     const dur = range ? duration / range * 100 : 1e-10;
                                     const cutprops = setprops( document.createElement("div"), { ...gprops, ...props } );
                                     return new TweenMax(gr, dur, {
-                                        ...cutprops, onComplete: () => setprops( gr, gprops )
+                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props } )
                                     })
                                 }),
                             align: "sequence",
