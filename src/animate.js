@@ -55,7 +55,7 @@ function setprops(node, { argv, class: _class, attribute, style, ...props } = {}
  * @param {String} key
  */
 
-export default (view, frames/*, key*/) =>
+export default (view, frames, key) =>
     stream((emt, {sweep, hook}) => {
 
         emt.kf();
@@ -88,11 +88,7 @@ export default (view, frames/*, key*/) =>
                 if(duration === -1) {
                     if (state === "play") {
                         if(from < 0) {
-                            const tl = new TweenMax({v: 100}, 1e-10, {
-                                delay: from < 0 ? -from : 0,
-                                onComplete: () => setprops( gr, gprops )
-                            } );
-                            tl.restart(true);
+                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops ));
                             _cache.push([name, tl]);
                         }
                         else {
