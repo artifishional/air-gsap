@@ -74,8 +74,9 @@ export default (view, frames/*, key*/) =>
             const inSchema = _schema.find(schema[0]);
 
             if (inSchema) {
-                const from = (time - ttmp) / 1000;
                 const [name, {duration = -1, delay = 0, query, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+                const from = (time - ttmp) / 1000 - delay;
+
                 const gr = view.query(query);
                 if(!gr) return emt({action: `${schema[0]}-complete`});
 
@@ -88,7 +89,7 @@ export default (view, frames/*, key*/) =>
                     if (state === "play") {
                         if(from < 0) {
                             const tl = new TweenMax({v: 100}, 1e-10, {
-                                delay: delay + (from < 0 ? -from : 0),
+                                delay: from < 0 ? -from : 0,
                                 onComplete: () => setprops( gr, gprops )
                             } );
                             tl.restart(true);
@@ -104,7 +105,7 @@ export default (view, frames/*, key*/) =>
                     if (state === "play") {
                         const tl = new TimelineMax({
                             paused: true,
-                            delay: delay + (from < 0 ? -from : 0),
+                            delay: from < 0 ? -from : 0,
                             tweens: keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
                                 .map(([range, props]) => {
@@ -117,7 +118,7 @@ export default (view, frames/*, key*/) =>
                             align: "sequence",
                             onComplete: () => emt({action: `${name}-complete`})
                         });
-                        from < 0 ? tl.restart(true) : tl.play(from, false);
+                        from <= 0 ? tl.restart(true) : tl.play(from, false);
                         _cache.push([name, tl]);
                     }
                 }
