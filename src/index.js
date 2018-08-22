@@ -1,1 +1,1 @@
-export { default as Animate } from "./animate"
+export { default as animate } from "./animate"

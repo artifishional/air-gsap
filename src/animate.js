@@ -1,67 +1,137 @@
 import {Schema} from "air-schema"
 import {TimelineMax, TweenMax} from "gsap/all"
-import {Observable} from "air-stream"
+import * as Ease from "gsap/all"
+import {stream} from "air-stream"
 const {performance} = window;
 
-export default class Animate extends Observable {
+function setprops(node, { argv, class: _class, attribute, style, ...props } = {}) {
 
-    /**
-     * @param {Object} gr
-     * @param {Object} frames
-     * [ "frames", [ "frame-name", { duration: (ms) }
-     *      [ 0 (%), { x: 100 (px), y: 100 (px) } ], (optional)
-     *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
-     *      [ 100 (%), { x: 200 (px), y: 100 (px) } ],
-     * ]]
-     */
-    constructor(gr, frames) {
-        super(emt => {
+    let format;
+    if(_class) {
+        if(_class[0] === "!") {
+            node.classList.remove(_class.substr(1));
+        }
+        else {
+            node.classList.add(_class);
+        }
+    }
 
-            emt.kf();
+    if(format = node.getAttribute( "data-m2-format" )) { }
+    else if(node.textContent.search(/\$\{.*\}/) > -1) {
+        format = node.textContent;
+        node.setAttribute( "data-m2-format", format )
+    }
 
-            const _cache = [];
-            const _schema = new Schema(frames);
+    if(format && argv !== undefined) {
+        if(typeof argv === "object") {
+            node.textContent = format.replace(/\$\{(.*?)\}/g, (_, name) => argv[name.trim()]);
+        }
+        else {
+            node.textContent = format.replace(/\$\{(.*?)\}/g, () => argv);
+        }
+    }
 
-            return ({
-                dissolve = false,
-                action: schema,
-                env: {time = performance.now(), ttmp = time, state = "play"} = {}
-            } = { dissolve: true }) => {
-                if (dissolve) {
-                    _cache.map(([_, tl]) => tl.kill());
+    if(attribute) {
+        for(let key in attribute) {
+            node.setAttribute(key, attribute[key]);
+        }
+    }
+    if(style) {
+        for(let key in style) {
+            node.style[key] = style[key];
+        }
+    }
+    return props;
+}
+
+/**
+ * @param {Object} gr
+ * @param {Object} frames
+ * [ "frames", [ "frame-name", { query: "", duration: (ms) }
+ *      [ 0 (%), { x: 100 (px), y: 100 (px) } ], (optional)
+ *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
+ *      [ 100 (%), { x: 200 (px), y: 100 (px) } ],
+ * ]]
+ * @param {String} key
+ */
+
+export default (view, frames, key) =>
+    stream((emt, {sweep, hook}) => {
+
+        emt.kf();
+
+        const _cache = [];
+        const _schema = new Schema(frames);
+
+        sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
+        hook.add(({
+                      action: schema,
+                      env: {time = performance.now(), ttmp = time, state = "play"} = {}
+                  }) => {
+
+            if(!schema) return;
+
+            const inSchema = _schema.find(schema[0]);
+
+            if (inSchema) {
+                const [name, {duration = -1, delay = 0, query, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+                const from = (time - ttmp) / 1000 - delay;
+
+                const gr = view.query(query);
+                if(!gr) return emt({action: `${schema[0]}-complete`});
+
+                const existIndex = _cache.findIndex(([x]) => name === x);
+                if (existIndex > -1) {
+                    _cache[existIndex][1].kill();
+                    _cache.splice(existIndex, 1);
                 }
-                else {
-                    const inSchema = _schema.find(schema[0]);
-                    if (inSchema) {
-                        const from = (time - ttmp) / 1000;
-                        const [name, {duration, delay = 0}, ...keys] = inSchema.merge(schema).toJSON();
-                        const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
-                        const existIndex = _cache.findIndex(([x]) => name === x);
-                        if (existIndex > -1) {
-                            _cache[existIndex][1].kill();
-                            _cache.splice(existIndex, 1);
-                        }
-                        if (state === "play") {
-                            const tl = new TimelineMax({
-                                delay: delay + (from < 0 ? -from : 0),
-                                tweens: keys
-                                    .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
-                                    .map(([range, props]) => new TweenMax(gr, duration / range * 100, {startAt, ...props})),
-                                align: "sequence",
-                                onComplete: () => emt({action: `${name}-complete`})
-                            });
-                            from < 0 ? tl.restart(true) : tl.seek(from, false);
+                if(duration === -1) {
+                    if (state === "play") {
+                        if(from < 0) {
+                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops ));
                             _cache.push([name, tl]);
                         }
-
+                        else {
+                            setprops( gr, gprops );
+                        }
                     }
-                    else {
-                        //todo need timer
-                        emt({action: `${schema[0]}-complete`});
+                }
+                else {
+                    //if(name === "fade-in") debugger;
+                    if (state === "play") {
+                        const tl = new TimelineMax({
+                            paused: true,
+                            delay: from < 0 ? -from : 0,
+                            tweens: keys
+                                .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
+                                .map(([range, props]) => {
+                                    const dur = range ? duration * range / 100 : 1e-10;
+                                    const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props } );
+                                    return new TweenMax(gr, dur, {
+                                        ease: parseEase(ease),
+                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props } )
+                                    })
+                                }),
+                            align: "sequence",
+                            onComplete: () => emt({action: `${name}-complete`})
+                        });
+                        from <= 0 ? tl.restart(true) : tl.play(from, false);
+                        _cache.push([name, tl]);
                     }
                 }
             }
-        });
-    }
+            else {
+                //todo need timer
+                return emt({action: `${schema[0]}-complete`});
+            }
 
-}
+        });
+    });
+
+    function parseEase(string) {
+        const easing = string.split(".");
+        if (easing.length === 2) return Ease[easing[0]][easing[1]];
+        const cfgExp = /true|false|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig;
+        const config = string.match(cfgExp).map(JSON.parse);
+        return Ease[easing[0]][easing[1]].config.apply(null, config);
+    }
