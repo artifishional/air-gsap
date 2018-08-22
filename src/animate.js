@@ -44,14 +44,6 @@ function setprops(node, { argv, class: _class, attribute, style, ...props } = {}
     return props;
 }
 
-function parseEase(string) {
-    const easing = string.split(".");
-    if (easing.length === 2) return Ease[easing[0]][easing[1]];
-    const cfgExp = /true|false|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig;
-    const config = string.match(cfgExp).map(JSON.parse);
-    return Ease[easing[0]][easing[1]].config.apply(null, config);
-}
-
 /**
  * @param {Object} gr
  * @param {Object} frames
@@ -111,7 +103,7 @@ export default (view, frames, key) =>
                             paused: true,
                             delay: from < 0 ? -from : 0,
                             tweens: keys
-                                .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
+                                .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
                                     const dur = range ? duration * range / 100 : 1e-10;
                                     const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props } );
@@ -135,3 +127,11 @@ export default (view, frames, key) =>
 
         });
     });
+
+    function parseEase(string) {
+        const easing = string.split(".");
+        if (easing.length === 2) return Ease[easing[0]][easing[1]];
+        const cfgExp = /true|false|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig;
+        const config = string.match(cfgExp).map(JSON.parse);
+        return Ease[easing[0]][easing[1]].config.apply(null, config);
+    }
