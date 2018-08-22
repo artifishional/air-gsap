@@ -1,7 +1,7 @@
 import {Schema} from "air-schema"
 import {TimelineMax, TweenMax} from "gsap/all"
+import * as Ease from "gsap/all"
 import {stream} from "air-stream"
-
 const {performance} = window;
 
 function setprops(node, { argv, class: _class, attribute, style, ...props } = {}) {
@@ -44,6 +44,14 @@ function setprops(node, { argv, class: _class, attribute, style, ...props } = {}
     return props;
 }
 
+function parseEase(string) {
+    const easing = string.split(".");
+    if (easing.length === 2) return Ease[easing[0]][easing[1]];
+    const cfgExp = /true|false|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig;
+    const config = string.match(cfgExp).map(JSON.parse);
+    return Ease[easing[0]][easing[1]].config.apply(null, config);
+}
+
 /**
  * @param {Object} gr
  * @param {Object} frames
@@ -65,9 +73,9 @@ export default (view, frames, key) =>
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({
-            action: schema,
-            env: {time = performance.now(), ttmp = time, state = "play"} = {}
-        }) => {
+                      action: schema,
+                      env: {time = performance.now(), ttmp = time, state = "play"} = {}
+                  }) => {
 
             if(!schema) return;
 
@@ -97,7 +105,7 @@ export default (view, frames, key) =>
                     }
                 }
                 else {
-                    //const startAt = keys[0] && keys[0][0] === 0 ? keys.shift()[1] : {};
+                    //if(name === "fade-in") debugger;
                     if (state === "play") {
                         const tl = new TimelineMax({
                             paused: true,
@@ -106,8 +114,9 @@ export default (view, frames, key) =>
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
                                 .map(([range, props]) => {
                                     const dur = range ? duration * range / 100 : 1e-10;
-                                    const cutprops = setprops( document.createElement("div"), { ...gprops, ...props } );
+                                    const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props } );
                                     return new TweenMax(gr, dur, {
+                                        ease: parseEase(ease),
                                         ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props } )
                                     })
                                 }),
