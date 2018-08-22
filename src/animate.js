@@ -105,7 +105,7 @@ export default (view, frames, key) =>
                             tweens: keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0) / 100, props])
                                 .map(([range, props]) => {
-                                    const dur = range ? duration / range * 100 : 1e-10;
+                                    const dur = range ? duration * range / 100 : 1e-10;
                                     const cutprops = setprops( document.createElement("div"), { ...gprops, ...props } );
                                     return new TweenMax(gr, dur, {
                                         ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props } )
