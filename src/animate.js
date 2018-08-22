@@ -7,13 +7,13 @@ const {performance} = window;
 function setprops(node, { argv, class: _class, attribute, style, ...props } = {}) {
 
     let format;
+
     if(_class) {
-        if(_class[0] === "!") {
-            node.classList.remove(_class.substr(1));
-        }
-        else {
-            node.classList.add(_class);
-        }
+        _class
+            .split(" ")
+            .filter(Boolean)
+            .map( cls => ({ cls: cls[0] === "!" ? cls.substr(1) : cls, toggle: cls[0] !== "!" }) )
+            .map( ({ cls, toggle }) => node.classList.toggle(cls, toggle));
     }
 
     if(format = node.getAttribute( "data-m2-format" )) { }
