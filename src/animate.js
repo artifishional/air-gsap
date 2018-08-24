@@ -4,9 +4,7 @@ import * as Ease from "gsap/all"
 import {stream} from "air-stream"
 const {performance} = window;
 
-function setprops(node, { argv, class: _class, attribute, style, ...props } = {}) {
-
-    let format;
+function setprops(node, { argv, class: _class, attribute, style, ...props } = {}, targeting = {}) {
 
     if(_class) {
         _class
@@ -16,19 +14,14 @@ function setprops(node, { argv, class: _class, attribute, style, ...props } = {}
             .map( ({ cls, toggle }) => node.classList.toggle(cls, toggle));
     }
 
-    if(format = node.getAttribute( "data-m2-format" )) { }
-    else if(node.textContent.search(/\$\{.*\}/) > -1) {
-        format = node.textContent;
-        node.setAttribute( "data-m2-format", format )
-    }
 
-    if(format && argv !== undefined) {
-        if(typeof argv === "object") {
-            node.textContent = format.replace(/\$\{(.*?)\}/g, (_, name) => argv[name.trim()]);
-        }
-        else {
-            node.textContent = format.replace(/\$\{(.*?)\}/g, () => argv);
-        }
+    if( argv !== undefined ) {
+        Object.keys(targeting).map(
+            key => {
+                targeting[key].nodeValue = key === "___default___" ? argv : argv[key]
+            }
+        );
+
     }
 
     if(attribute) {
@@ -64,10 +57,7 @@ export default (view, frames, key) =>
         const _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
-        hook.add(({
-                      action: schema,
-                      env: {time = performance.now(), ttmp = time, state = "play"} = {}
-                  }) => {
+        hook.add(({ action: schema, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
 
             if(!schema) return;
 
@@ -88,11 +78,11 @@ export default (view, frames, key) =>
                 if(duration === -1) {
                     if (state === "play") {
                         if(from < 0) {
-                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops ));
+                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props.targeting ));
                             _cache.push([name, tl]);
                         }
                         else {
-                            setprops( gr, gprops );
+                            setprops( gr, gprops, view.props.targeting );
                         }
                     }
                 }
@@ -109,7 +99,7 @@ export default (view, frames, key) =>
                                     const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props } );
                                     return new TweenMax(gr, dur, {
                                         ease: parseEase(ease),
-                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props } )
+                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props.targeting )
                                     })
                                 }),
                             align: "sequence",
