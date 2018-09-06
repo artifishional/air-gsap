@@ -6,7 +6,7 @@ import {Howler} from "howler"
 
 const {performance} = window;
 
-function setprops(node, { argv, class: _class, attribute, order, style, sound, ...props } = {}, { resources, targeting = {} } = {}) {
+function setprops(node, { muted, argv, class: _class, attribute, style, sound, ...props } = {}, { resources, targeting = {} } = {}) {
 
     if(_class) {
         _class
@@ -16,8 +16,8 @@ function setprops(node, { argv, class: _class, attribute, order, style, sound, .
             .map( ({ cls, toggle }) => node.classList.toggle(cls, toggle));
     }
 
-    if(order) {
-        node.parentNode.append(node);
+    if(muted !== undefined) {
+        Howler.mute(muted);
     }
 
     if(sound) {
@@ -128,10 +128,10 @@ export default (view, frames, key) =>
         });
     });
 
-function parseEase(string) {
-    const easing = string.split(".");
-    if (easing.length === 2) return Ease[easing[0]][easing[1]];
-    const cfgExp = /true|false|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig;
-    const config = string.match(cfgExp).map(JSON.parse);
-    return Ease[easing[0]][easing[1]].config.apply(null, config);
-}
+    function parseEase(string) {
+        const easing = string.split(".");
+        if (easing.length === 2) return Ease[easing[0]][easing[1]];
+        const cfgExp = /true|false|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig;
+        const config = string.match(cfgExp).map(JSON.parse);
+        return Ease[easing[0]][easing[1]].config.apply(null, config);
+    }
