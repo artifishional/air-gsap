@@ -6,7 +6,11 @@ import {Howler} from "howler"
 
 const {performance} = window;
 
-function setprops(node, { muted, argv, class: _class, attribute, style, sound, ...props } = {}, { resources, targeting = {} } = {}) {
+function setprops(node, { muted = null, argv = {}, class: _class, attribute, style, sound, ...props } = {}, { resources, targeting = [] } = {}, intl) {
+
+    if(typeof argv === "string" || typeof argv === "number") {
+        argv = { ___default___: argv };
+    }
 
     if(_class) {
         _class
@@ -16,7 +20,7 @@ function setprops(node, { muted, argv, class: _class, attribute, style, sound, .
             .map( ({ cls, toggle }) => node.classList.toggle(cls, toggle));
     }
 
-    if(muted !== undefined) {
+    if(muted !== null) {
         Howler.mute(muted);
     }
 
@@ -25,14 +29,21 @@ function setprops(node, { muted, argv, class: _class, attribute, style, sound, .
         _sound && _sound.play();
     }
 
-    if( argv !== undefined ) {
-        Object.keys(targeting).map(
-            key => {
-                targeting[key].nodeValue = key === "___default___" ? argv : argv[key]
+    targeting.map(
+        ({ type, name: key, target }) => {
+            if(type === "argv" && argv.hasOwnProperty(key)) {
+                target.nodeValue = argv[key]
             }
-        );
-
-    }
+            else if(type === "lang") {
+                const lang = resources.find(({type}) => type === "language");
+                debugger;
+                if(lang) {
+                    const literal = lang.content.find(([name]) => name === key);
+                    target.nodeValue = literal[1][intl.language] || literal[1]["en"];
+                }
+            }
+        }
+    );
 
     if(attribute) {
         for(let key in attribute) {
@@ -67,7 +78,7 @@ export default (view, frames, key) =>
         const _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
-        hook.add(({ action: schema, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
+        hook.add(({ action: schema, intl = {}, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
 
             if(!schema) return;
 
@@ -88,11 +99,11 @@ export default (view, frames, key) =>
                 if(duration === -1) {
                     if (state === "play") {
                         if(from < 0) {
-                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props ));
+                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props, intl ));
                             _cache.push([name, tl]);
                         }
                         else {
-                            setprops( gr, gprops, view.props );
+                            setprops( gr, gprops, view.props, intl );
                         }
                     }
                 }
@@ -106,10 +117,10 @@ export default (view, frames, key) =>
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
                                     const dur = range ? duration * range / 100 : 1e-10;
-                                    const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props );
+                                    const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props, intl );
                                     return new TweenMax(gr, dur, {
                                         ease: parseEase(ease),
-                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props )
+                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl )
                                     })
                                 }),
                             align: "sequence",
