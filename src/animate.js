@@ -30,16 +30,23 @@ function setprops(node, { muted = null, argv = {}, class: _class, attribute, sty
     }
 
     targeting.map(
-        ({ type, name: key, target }) => {
+        ({ type, name: key, target, param }) => {
             if(type === "argv" && argv.hasOwnProperty(key)) {
                 target.nodeValue = argv[key]
             }
             else if(type === "lang") {
                 const lang = resources.find(({type}) => type === "language");
-                debugger;
                 if(lang) {
                     const literal = lang.content.find(([name]) => name === key);
                     target.nodeValue = literal[1][intl.language] || literal[1]["en"];
+                }
+            }
+            else if(type === "intl") {
+                const _intl = resources.find(({type}) => type === "intl");
+                if(_intl) {
+                    const format = _intl.content.find(([name]) => name === key);
+                    format.currency = format.currency || intl.currency;
+                    target.nodeValue = Intl.NumberFormat(intl.language, format[1]).format( argv[param] );
                 }
             }
         }
