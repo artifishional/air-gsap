@@ -6,7 +6,12 @@ import {Howler} from "howler"
 
 const {performance} = window;
 
-function setprops(node, { muted, argv, class: _class, attribute, style, sound, ...props } = {}, { resources, targeting = {} } = {}) {
+function setprops(
+    node, { muted = null, argv = {}, class: _class, attribute, style, sound, ...props } = {},
+    { resources, targeting = [] } = {},
+    intl,
+    view = null
+) {
 
     if(_class) {
         _class
@@ -16,7 +21,7 @@ function setprops(node, { muted, argv, class: _class, attribute, style, sound, .
             .map( ({ cls, toggle }) => node.classList.toggle(cls, toggle));
     }
 
-    if(muted !== undefined) {
+    if(muted !== null) {
         Howler.mute(muted);
     }
 
@@ -25,14 +30,7 @@ function setprops(node, { muted, argv, class: _class, attribute, style, sound, .
         _sound && _sound.play();
     }
 
-    if( argv !== undefined ) {
-        Object.keys(targeting).map(
-            key => {
-                targeting[key].nodeValue = key === "___default___" ? argv : argv[key]
-            }
-        );
-
-    }
+    view && view.setprops(argv, intl);
 
     if(attribute) {
         for(let key in attribute) {
@@ -47,17 +45,6 @@ function setprops(node, { muted, argv, class: _class, attribute, style, sound, .
     return props;
 }
 
-/**
- * @param {Object} gr
- * @param {Object} frames
- * [ "frames", [ "frame-name", { query: "", duration: (ms) }
- *      [ 0 (%), { x: 100 (px), y: 100 (px) } ], (optional)
- *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
- *      [ 100 (%), { x: 200 (px), y: 100 (px) } ],
- * ]]
- * @param {String} key
- */
-
 export default (view, frames, key) =>
     stream((emt, {sweep, hook}) => {
 
@@ -67,9 +54,11 @@ export default (view, frames, key) =>
         const _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
-        hook.add(({ action: schema, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
+        hook.add(({ action: schema, intl = null, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
 
-            if(!schema) return;
+            intl && view.setprops( null, intl );
+
+            if(!Array.isArray(schema)) return;
 
             const inSchema = _schema.find(schema[0]);
 
@@ -88,11 +77,11 @@ export default (view, frames, key) =>
                 if(duration === -1) {
                     if (state === "play") {
                         if(from < 0) {
-                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props ));
+                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props, intl, view ));
                             _cache.push([name, tl]);
                         }
                         else {
-                            setprops( gr, gprops, view.props );
+                            setprops( gr, gprops, view.props, intl, view );
                         }
                     }
                 }
@@ -106,10 +95,10 @@ export default (view, frames, key) =>
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
                                     const dur = range ? duration * range / 100 : 1e-10;
-                                    const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props );
+                                    const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props, intl );
                                     return new TweenMax(gr, dur, {
                                         ease: parseEase(ease),
-                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props )
+                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl, view )
                                     })
                                 }),
                             align: "sequence",
