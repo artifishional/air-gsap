@@ -6,11 +6,12 @@ import {Howler} from "howler"
 
 const {performance} = window;
 
-function setprops(node, { muted = null, argv = {}, class: _class, attribute, style, sound, ...props } = {}, { resources, targeting = [] } = {}, intl) {
-
-    if(typeof argv === "string" || typeof argv === "number") {
-        argv = { ___default___: argv };
-    }
+function setprops(
+    node, { muted = null, argv = {}, class: _class, attribute, style, sound, ...props } = {},
+    { resources, targeting = [] } = {},
+    intl,
+    view = null
+) {
 
     if(_class) {
         _class
@@ -29,28 +30,7 @@ function setprops(node, { muted = null, argv = {}, class: _class, attribute, sty
         _sound && _sound.play();
     }
 
-    targeting.map(
-        ({ type, name: key, target, param }) => {
-            if(type === "argv" && argv.hasOwnProperty(key)) {
-                target.nodeValue = argv[key]
-            }
-            else if(type === "lang") {
-                const lang = resources.find(({type}) => type === "language");
-                if(lang) {
-                    const literal = lang.content.find(([name]) => name === key);
-                    target.nodeValue = literal[1][intl.language] || literal[1]["en"];
-                }
-            }
-            else if(type === "intl") {
-                const _intl = resources.find(({type}) => type === "intl");
-                if(_intl) {
-                    const format = _intl.content.find(([name]) => name === key);
-                    format.currency = format.currency || intl.currency;
-                    target.nodeValue = Intl.NumberFormat(intl.language, format[1]).format( argv[param] );
-                }
-            }
-        }
-    );
+    view && view.setprops(argv, intl);
 
     if(attribute) {
         for(let key in attribute) {
@@ -65,17 +45,6 @@ function setprops(node, { muted = null, argv = {}, class: _class, attribute, sty
     return props;
 }
 
-/**
- * @param {Object} gr
- * @param {Object} frames
- * [ "frames", [ "frame-name", { query: "", duration: (ms) }
- *      [ 0 (%), { x: 100 (px), y: 100 (px) } ], (optional)
- *      [ 20 (%), { x: 100 (px), y: 200 (px) } ],
- *      [ 100 (%), { x: 200 (px), y: 100 (px) } ],
- * ]]
- * @param {String} key
- */
-
 export default (view, frames, key) =>
     stream((emt, {sweep, hook}) => {
 
@@ -85,9 +54,11 @@ export default (view, frames, key) =>
         const _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
-        hook.add(({ action: schema, intl = {}, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
+        hook.add(({ action: schema, intl = null, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
 
-            if(!schema) return;
+            intl && view.setprops( null, intl );
+
+            if(!Array.isArray(schema)) return;
 
             const inSchema = _schema.find(schema[0]);
 
@@ -106,11 +77,11 @@ export default (view, frames, key) =>
                 if(duration === -1) {
                     if (state === "play") {
                         if(from < 0) {
-                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props, intl ));
+                            const tl = TweenMax.delayedCall(from < 0 ? -from : 0, () => setprops( gr, gprops, view.props, intl, view ));
                             _cache.push([name, tl]);
                         }
                         else {
-                            setprops( gr, gprops, view.props, intl );
+                            setprops( gr, gprops, view.props, intl, view );
                         }
                     }
                 }
@@ -127,7 +98,7 @@ export default (view, frames, key) =>
                                     const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props, intl );
                                     return new TweenMax(gr, dur, {
                                         ease: parseEase(ease),
-                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl )
+                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl, view )
                                     })
                                 }),
                             align: "sequence",
