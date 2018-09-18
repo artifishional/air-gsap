@@ -7,7 +7,7 @@ import {Howler} from "howler"
 const {performance} = window;
 
 function setprops(
-    node, { muted = null, argv = {}, class: _class, attribute, style, sound, ...props } = {},
+    node, { muted = null, argv = null, class: _class, attribute, style, sound, ...props } = {},
     { resources, targeting = [] } = {},
     intl,
     view = null
@@ -86,21 +86,46 @@ export default (view, frames, key) =>
                     }
                 }
                 else {
-                    //if(name === "fade-in") debugger;
+
                     if (state === "play") {
                         const tl = new TimelineMax({
                             paused: true,
                             delay: from < 0 ? -from : 0,
-                            tweens: keys
+                            tweens: [].concat(...keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
                                     const dur = range ? duration * range / 100 : 1e-10;
                                     const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props, intl );
-                                    return new TweenMax(gr, dur, {
+
+                                    const res = [];
+
+                                    const set = {
                                         ease: parseEase(ease),
-                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl, view )
-                                    })
-                                }),
+                                        ...cutprops,
+                                        onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl, view )
+                                    };
+
+                                    if(Object.keys(cutprops).length) {
+                                        res.push( new TweenMax(gr, dur, {
+                                            ...set,
+                                            ...cutprops
+                                        }) );
+                                    }
+
+                                    //todo now only ___default___ argv supported
+                                    if(gprops.argv !== undefined) {
+                                        gprops.argv = { ___default___: gprops.argv };
+                                        const argv = view.getargv();
+                                        res.push( new TweenMax(argv, dur, {
+                                            ...set, ...gprops.argv,
+                                            onUpdate: () => {
+                                                view.setprops(argv, intl);
+                                            }
+                                        }) );
+                                    }
+
+                                    return res;
+                                })),
                             align: "sequence",
                             onComplete: () => emt({action: `${name}-complete`})
                         });
