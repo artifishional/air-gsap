@@ -63,7 +63,8 @@ export default (view, frames, key) =>
             const inSchema = _schema.find(schema[0]);
 
             if (inSchema) {
-                const [name, {duration = -1, delay = 0, query, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+                const [name, {duration = -1, delay = 0, query, log = false, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+                log && console.log( ttmp, key, [ name, {duration, ...gprops }, ...keys ] );
                 const from = (time - ttmp) / 1000 - delay;
                 const gr = view.query(query);
                 if(!gr) return emt({action: `${schema[0]}-complete`});
