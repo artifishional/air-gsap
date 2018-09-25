@@ -7,11 +7,15 @@ import {Howler} from "howler"
 const {performance} = window;
 
 function setprops(
-    node, { muted = null, argv = null, class: _class, attribute, style, sound, ...props } = {},
+    node, { muted = null, argv = null, class: _class, attribute, order, style, sound, ...props } = {},
     { resources, targeting = [] } = {},
     intl,
     view = null
 ) {
+
+    if(order === "tofront") {
+        node.parentNode.append(node);
+    }
 
     if(_class) {
         _class
