@@ -13,7 +13,7 @@ function setprops(
     view = null
 ) {
 
-    if(order === "tofront") {
+    if(order === "tofront" && node.parentNode) {
         node.parentNode.append(node);
     }
 
