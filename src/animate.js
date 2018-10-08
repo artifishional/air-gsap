@@ -7,11 +7,15 @@ import {Howler} from "howler"
 const {performance} = window;
 
 function setprops(
-    node, { muted = null, argv = {}, class: _class, attribute, style, sound, ...props } = {},
+    node, { muted = null, argv = null, class: _class, attribute, order, style, sound, ...props } = {},
     { resources, targeting = [] } = {},
     intl,
     view = null
 ) {
+
+    if(order === "tofront" && node.parentNode) {
+        node.parentNode.append(node);
+    }
 
     if(_class) {
         _class
@@ -63,7 +67,8 @@ export default (view, frames, key) =>
             const inSchema = _schema.find(schema[0]);
 
             if (inSchema) {
-                const [name, {duration = -1, delay = 0, query, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+                const [name, {duration = -1, delay = 0, query, log = false, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+                log && console.log( ttmp, key, [ name, {duration, ...gprops }, ...keys ] );
                 const from = (time - ttmp) / 1000 - delay;
                 const gr = view.query(query);
                 if(!gr) return emt({action: `${schema[0]}-complete`});
@@ -86,21 +91,46 @@ export default (view, frames, key) =>
                     }
                 }
                 else {
-                    //if(name === "fade-in") debugger;
+
                     if (state === "play") {
                         const tl = new TimelineMax({
                             paused: true,
                             delay: from < 0 ? -from : 0,
-                            tweens: keys
+                            tweens: [].concat(...keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
                                     const dur = range ? duration * range / 100 : 1e-10;
                                     const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props, intl );
-                                    return new TweenMax(gr, dur, {
+
+                                    const res = [];
+
+                                    const set = {
                                         ease: parseEase(ease),
-                                        ...cutprops, onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl, view )
-                                    })
-                                }),
+                                        ...cutprops,
+                                        onComplete: () => setprops( gr, { ...gprops, ...props }, view.props, intl, view )
+                                    };
+
+                                    if(Object.keys(cutprops).length) {
+                                        res.push( new TweenMax(gr, dur, {
+                                            ...set,
+                                            ...cutprops
+                                        }) );
+                                    }
+
+                                    //todo now only ___default___ argv supported
+                                    if(gprops.argv !== undefined) {
+                                        gprops.argv = { ___default___: gprops.argv };
+                                        const argv = view.getargv();
+                                        res.push( new TweenMax(argv, dur, {
+                                            ...set, ...gprops.argv,
+                                            onUpdate: () => {
+                                                view.setprops(argv, intl);
+                                            }
+                                        }) );
+                                    }
+
+                                    return res;
+                                })),
                             align: "sequence",
                             onComplete: () => emt({action: `${name}-complete`})
                         });
