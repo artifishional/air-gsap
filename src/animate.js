@@ -55,7 +55,7 @@ export default (view, frames, key) =>
         emt.kf();
 
         const _cache = [];
-        const _schema = new Schema(frames);
+        let _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({ action: schema, intl = null, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
@@ -67,6 +67,7 @@ export default (view, frames, key) =>
             const inSchema = _schema.find(schema[0]);
 
             if (inSchema) {
+                inSchema.fill( schema );
                 const [name, {duration = -1, delay = 0, query, log = false, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
                 log && console.log( ttmp, key, [ name, {duration, ...gprops }, ...keys ] );
                 const from = (time - ttmp) / 1000 - delay;
