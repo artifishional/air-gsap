@@ -55,7 +55,7 @@ export default (view, frames, key) =>
         emt.kf();
 
         const _cache = [];
-        let _schema = new Schema(frames);
+        //let _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({ action: schema, intl = null, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
@@ -64,21 +64,41 @@ export default (view, frames, key) =>
 
             if(!Array.isArray(schema)) return;
 
-            const inSchema = _schema.find(schema[0]);
+            const inSchema = new Schema(frames).find(schema[0]);
 
             if (inSchema) {
-                inSchema.fill( schema );
-                const [name, {duration = -1, delay = 0, query, log = false, ...gprops }, ...keys] = inSchema.merge(schema).toJSON();
+
+                let data = null;
+
+                if(inSchema.filler) {
+                    data = inSchema.fill( schema ).toJSON();
+                }
+                else {
+                    data = inSchema.merge( schema ).toJSON();
+                }
+
+                const [name, {
+                    duration = -1,
+                    delay = 0,
+                    query,
+                    log = false,
+                    ...gprops
+                }, ...keys] = data;
+
                 log && console.log( ttmp, key, [ name, {duration, ...gprops }, ...keys ] );
                 const from = (time - ttmp) / 1000 - delay;
                 const gr = view.query(query);
+
                 if(!gr) return emt({action: `${schema[0]}-complete`});
 
-                const existIndex = _cache.findIndex(([x]) => name === x);
+                /*const existIndex = _cache.findIndex(([x]) => name === x);
                 if (existIndex > -1) {
                     _cache[existIndex][1].kill();
                     _cache.splice(existIndex, 1);
-                }
+                }*/
+
+                _cache.map(([_, tl]) => tl.kill());
+                _cache.length = 0;
 
                 if(duration === -1) {
                     if (state === "play") {
@@ -100,7 +120,7 @@ export default (view, frames, key) =>
                             tweens: [].concat(...keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
-                                    const dur = range ? duration * range / 100 : 1e-10;
+                                    const dur = range ? duration * range : 1e-10;
                                     const {ease = "Power1.easeOut", ...cutprops} = setprops( document.createElement("div"), { ...gprops, ...props }, view.props, intl );
 
                                     const res = [];
