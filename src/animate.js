@@ -49,8 +49,10 @@ function setprops(
     return props;
 }
 
-export default (view, keyframes, key) =>
+export default (view, { keyframes, targets }, key) =>
     stream((emt, { sweep, hook }) => {
+
+        const intl = {};
 
         emt.kf();
 
@@ -59,53 +61,49 @@ export default (view, keyframes, key) =>
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({
-                      data: [ data, action ],
-                      env: { time = performance.now(), ttmp = time, state = "play" } = {}
-                  } = {}) => {
+            data: [ data, action = "default" ],
+            env: { time = performance.now(), ttmp = time, state = "play" } = {}
+        } = {}) => {
 
             //intl && view.setprops(null, intl);
             //if (!Array.isArray(schema)) return;
             //const inSchema = new Schema(frames).find(schema[0]);
 
-            const schema = keyframes.find( ([ name ]) => action === name );
+            let inSchema = keyframes.find( ([ name ]) => action === name );
 
-            if(schema) {
-
-                debugger;
-
+            if(!inSchema) {
+                inSchema = [ action, () => ({ duration: 1e-10 }), [ 1, () => data ] ];
             }
+            
+            if(key.color === "black") {
+                debugger;
+            }
+            
+            if (data) {
 
+                inSchema = [ inSchema[0], inSchema[1](data), inSchema.slice(2).map( ([ offset, fn ]) =>
+                    [ offset, fn() ]
+                ) ];
 
-
-            if (inSchema) {
-
-                let data = null;
-
-                /*if (inSchema.filler) {
-                    data = inSchema.fill(schema).toJSON();
-                } else {
-                    data = inSchema.merge(schema).toJSON();
-                }*/
+                //let data = null;
 
                 const [name, {
                     duration = -1,
                     delay = 0,
-                    query,
                     log = false,
                     ...gprops
-                }, ...keys] = data;
+                }, ...keys] = inSchema;
 
                 log && console.log(ttmp, key, [name, {duration, ...gprops}, ...keys]);
                 const from = (time - ttmp) / 1000 - delay;
-                const gr = view.query(query);
 
-                if (!gr) return emt({action: `${schema[0]}-complete`});
+                const gr = targets;
 
-                /*const existIndex = _cache.findIndex(([x]) => name === x);
-                if (existIndex > -1) {
-                    _cache[existIndex][1].kill();
-                    _cache.splice(existIndex, 1);
-                }*/
+
+                //const gr = view.query(query);
+
+                //if (!gr) return emt({action: `${schema[0]}-complete`});
+
 
                 _cache.map(([_, tl]) => tl.kill());
                 _cache.length = 0;
@@ -153,7 +151,8 @@ export default (view, keyframes, key) =>
                                         res.push(new TweenMax(argv, dur, {
                                             ...set, ...gprops.argv,
                                             onUpdate: () => {
-                                                view.setprops(argv, intl);
+                                                view.update( argv );
+                                                //view.setprops(argv, intl);
                                             }
                                         }));
                                     }
@@ -169,7 +168,7 @@ export default (view, keyframes, key) =>
                 }
             } else {
                 //todo need timer
-                return emt({action: `${schema[0]}-complete`});
+                return emt({action: `${action}-complete`});
             }
 
         });
