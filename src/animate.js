@@ -3,6 +3,7 @@ import {TimelineMax, TweenMax} from "gsap/all"
 import * as Ease from "gsap/all"
 import {stream} from "air-stream"
 import {Howler} from "howler"
+import { def, utils } from "air-m2"
 
 const {performance} = window;
 
@@ -34,7 +35,7 @@ function setprops(
         _sound && _sound.play();
     }
 
-    view && view.setprops(argv, intl);
+    //view && view.setprops(argv, intl);
 
     if (attribute) {
         for (let key in attribute) {
@@ -61,6 +62,7 @@ export default (view, { keyframes, targets }, key) =>
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({
+            intl,
             data: [ data, action = "default" ],
             env: { time = performance.now(), ttmp = time, state = "play" } = {}
         } = {}) => {
@@ -75,13 +77,9 @@ export default (view, { keyframes, targets }, key) =>
                 inSchema = [ action, () => ({ duration: 1e-10 }), [ 1, () => data ] ];
             }
             
-            if(key.color === "black") {
-                debugger;
-            }
-            
             if (data) {
 
-                inSchema = [ inSchema[0], inSchema[1](data), inSchema.slice(2).map( ([ offset, fn ]) =>
+                inSchema = [ inSchema[0], inSchema[1](data), ...inSchema.slice(2).map( ([ offset, fn ]) =>
                     [ offset, fn() ]
                 ) ];
 
@@ -126,8 +124,10 @@ export default (view, { keyframes, targets }, key) =>
                             tweens: [].concat(...keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
+
                                     const dur = range ? duration * range : 1e-10;
-                                    const {ease = "Power1.easeOut", ...cutprops} = setprops(document.createElement("div"), {...gprops, ...props}, view.props, intl);
+                                    const {ease = "Power1.easeOut", ...cutprops} =
+                                        setprops(document.createElement("div"), {...gprops, ...props}, view.props, intl);
 
                                     const res = [];
 
@@ -136,6 +136,18 @@ export default (view, { keyframes, targets }, key) =>
                                         ...cutprops,
                                         onComplete: () => setprops(gr, {...gprops, ...props}, view.props, intl, view)
                                     };
+                                    
+                                    const activeDataTargets = gr.filter( ({ type }) => type === "data" );
+
+                                    if(activeDataTargets.length) {
+                                        const cutten = utils.copy( props );
+                                        res.push(new TweenMax(cutten, dur, {
+                                            ...set, ...gprops,
+                                            onUpdate: () => {
+                                                view.update( cutten, intl );
+                                            }
+                                        }));
+                                    }
 
                                     if (Object.keys(cutprops).length) {
                                         res.push(new TweenMax(gr, dur, {
