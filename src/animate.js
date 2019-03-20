@@ -62,25 +62,23 @@ export default (view, { keyframes, targets }, key) =>
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
         hook.add(({
+            requesterID = 0,
             intl,
             data: [ data, action = "default" ],
             env: { time = performance.now(), ttmp = time, state = "play" } = {}
         } = {}) => {
-
-            //intl && view.setprops(null, intl);
-            //if (!Array.isArray(schema)) return;
-            //const inSchema = new Schema(frames).find(schema[0]);
 
             let inSchema = keyframes.find( ([ name ]) => action === name );
 
             if(!inSchema) {
                 inSchema = [ action, () => ({ duration: 1e-10 }), [ 1, () => data ] ];
             }
+
             
             if (data) {
 
                 inSchema = [ inSchema[0], inSchema[1](data), ...inSchema.slice(2).map( ([ offset, fn ]) =>
-                    [ offset, fn() ]
+                    [ offset, fn(data) ]
                 ) ];
 
                 //let data = null;
@@ -137,9 +135,9 @@ export default (view, { keyframes, targets }, key) =>
                                         onComplete: () => setprops(gr, {...gprops, ...props}, view.props, intl, view)
                                     };
                                     
-                                    const activeDataTargets = gr.filter( ({ type }) => type === "data" );
+                                    const datasTargets = gr.filter( ({ type }) => type === "data" );
 
-                                    if(activeDataTargets.length) {
+                                    if(datasTargets.length) {
                                         const cutten = utils.copy( props );
                                         res.push(new TweenMax(cutten, dur, {
                                             ...set, ...gprops,
@@ -149,30 +147,21 @@ export default (view, { keyframes, targets }, key) =>
                                         }));
                                     }
 
-                                    if (Object.keys(cutprops).length) {
-                                        res.push(new TweenMax(gr, dur, {
+                                    const activesTargets = gr.filter( ({ type }) => type === "active" );
+
+                                    if (cutprops.hasOwnProperty("scaleX") &&
+                                        activesTargets.length
+                                    ) {
+                                        res.push(new TweenMax(gr.map(({ node }) => node), dur, {
                                             ...set,
                                             ...cutprops
-                                        }));
-                                    }
-
-                                    //todo now only ___default___ argv supported
-                                    if (gprops.argv !== undefined) {
-                                        gprops.argv = {___default___: gprops.argv};
-                                        const argv = view.getargv();
-                                        res.push(new TweenMax(argv, dur, {
-                                            ...set, ...gprops.argv,
-                                            onUpdate: () => {
-                                                view.update( argv );
-                                                //view.setprops(argv, intl);
-                                            }
                                         }));
                                     }
 
                                     return res;
                                 })),
                             align: "sequence",
-                            onComplete: () => emt({action: `${name}-complete`})
+                            onComplete: () => emt({requesterID, action: `${name}-complete`})
                         });
                         from <= 0 ? tl.restart(true) : tl.play(from, false);
                         _cache.push([name, tl]);
@@ -180,7 +169,7 @@ export default (view, { keyframes, targets }, key) =>
                 }
             } else {
                 //todo need timer
-                return emt({action: `${action}-complete`});
+                return emt({requesterID, action: `${action}-complete`});
             }
 
         });
