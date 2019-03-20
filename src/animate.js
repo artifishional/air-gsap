@@ -58,7 +58,10 @@ export default (view, frames, key) =>
         const _schema = new Schema(frames);
 
         sweep.add(() => _cache.map(([_, tl]) => tl.kill()));
-        hook.add(({ action: schema, intl = null, env: {time = performance.now(), ttmp = time, state = "play"} = {} }) => {
+
+
+
+        hook.add(({ action: schema, intl = null }) => {
 
             intl && view.setprops( null, intl );
 

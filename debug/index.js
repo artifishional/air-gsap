@@ -1,15 +1,29 @@
-import Animate from "../src/animate"
+import { animate } from "../src/index"
 
-window.addEventListener("load", ()=> {
 
-    const ext = new Animate( document.querySelector("div"), [
-        "frames", [ "fade-in", { duration: 3 },
-            [ 0, { opacity: 1 } ],
-            [ 100, { opacity: 0 } ],
-        ]
-    ] );
+const stream = animate( [ document.body ], [{
+    name: "default",
+    prop: (schema) => ({ duration: 5 }),
+    keys: [
+        { offset: 1, prop: (schema) => ({ color: `rgb(${schema.colorRED},0,0)` }) }
+    ] }]
+);
 
-    const bob = ext.on( (data) => console.log(data) );
-    bob( { action: [ "fade-in" ] } );
 
-});
+
+
+const connector = stream.on( ({ action }) => {
+    console.log(action, "complete");
+} );
+
+connector( [ { colorRED: 255 }, { action: "default" } ] );
+
+
+setTimeout(() => {
+
+    connector( [ { colorRED: 255 }, { action: "default" } ] );
+
+}, 5000);
+
+
+connector();
