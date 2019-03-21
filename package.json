@@ -16,7 +16,6 @@
     "webpack-cli": "^2.0.15"
   },
   "dependencies": {
-    "air-schema": "^0.1.0",
     "air-stream": "^0.6.0",
     "gsap": "^2.0.2"
   }
