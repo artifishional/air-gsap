@@ -64,7 +64,7 @@ export default (view, { keyframes, targets }, key) =>
         hook.add(({
             requesterID = 0,
             intl,
-            data: [ data, action = "default" ],
+            data: [ data, { action = "default" } ],
             env: { time = performance.now(), ttmp = time, state = "play" } = {}
         } = {}) => {
 
@@ -122,7 +122,6 @@ export default (view, { keyframes, targets }, key) =>
                             tweens: [].concat(...keys
                                 .map(([to, props], i, arr) => [to - (arr[i - 1] ? arr[i - 1][0] : 0), props])
                                 .map(([range, props]) => {
-
                                     const dur = range ? duration * range : 1e-10;
                                     const {ease = "Power1.easeOut", ...cutprops} =
                                         setprops(document.createElement("div"), {...gprops, ...props}, view.props, intl);
@@ -149,8 +148,10 @@ export default (view, { keyframes, targets }, key) =>
 
                                     const activesTargets = gr.filter( ({ type }) => type === "active" );
 
-                                    if (cutprops.hasOwnProperty("scaleX") &&
-                                        activesTargets.length
+                                    if ((
+                                        cutprops.hasOwnProperty("opacity") ||
+                                        cutprops.hasOwnProperty("scaleX")
+                                        ) && activesTargets.length
                                     ) {
                                         res.push(new TweenMax(gr.map(({ node }) => node), dur, {
                                             ...set,
