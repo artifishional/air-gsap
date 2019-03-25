@@ -92,14 +92,13 @@ export default (view, { keyframes, targets }, key) =>
 
                 log && console.log(ttmp, key, [name, {duration, ...gprops}, ...keys]);
                 const from = (time - ttmp) / 1000 - delay;
-
+                
+	            if(keys.every( ([ , key ]) => !Object.keys( key ).length )) {
+	                emt.kf();
+		            return emt({requesterID, action: `${action}-complete`});
+                }
+                
                 const gr = targets;
-
-
-                //const gr = view.query(query);
-
-                //if (!gr) return emt({action: `${schema[0]}-complete`});
-
 
                 _cache.map(([_, tl]) => tl.kill());
                 _cache.length = 0;
@@ -162,7 +161,10 @@ export default (view, { keyframes, targets }, key) =>
                                     return res;
                                 })),
                             align: "sequence",
-                            onComplete: () => emt({requesterID, action: `${name}-complete`})
+                            onComplete: () => {
+                                emt.kf();
+                                emt({requesterID, action: `${name}-complete`})
+                            }
                         });
                         from <= 0 ? tl.restart(true) : tl.play(from, false);
                         _cache.push([name, tl]);
@@ -170,11 +172,12 @@ export default (view, { keyframes, targets }, key) =>
                 }
             } else {
                 //todo need timer
+	            emt.kf();
                 return emt({requesterID, action: `${action}-complete`});
             }
 
         });
-    });
+    })
 
 function parseEase(string) {
     const easing = string.split(".");
